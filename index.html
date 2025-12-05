@@ -220,6 +220,79 @@
       align-self: flex-start;
     }
 
+    /* Modal Styles */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 300ms ease;
+    }
+
+    .modal.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      width: 90%;
+      max-width: 400px;
+      height: 80vh;
+      background: #0f172a;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      transform: scale(0.95);
+      transition: transform 300ms cubic-bezier(.2, .9, .2, 1);
+    }
+
+    .modal.open .modal-content {
+      transform: scale(1);
+    }
+
+    .clickable {
+      cursor: pointer;
+      transition: transform 200ms ease, box-shadow 200ms ease;
+    }
+
+    .clickable:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+      border-color: var(--accent);
+    }
+
+    .summary-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.02);
+    }
+
+    .summary-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 12px;
+    }
+
     /* nav */
     .nav {
       position: absolute;
@@ -396,36 +469,40 @@
             </div>
           </div>
           <div class="right">
-            <div class="mock-phone card">
-              <div class="chip muted">PPPoE Flow Analysis</div>
-              <div class="screen">
-                <div class="log-divider">Discovery Stage • ETH 0x8863</div>
-                <div class="packet-log"><span class="time">0.000</span><span class="proto">PADI</span><span
-                    class="info">Broadcast</span></div>
-                <div class="packet-log"><span class="time">0.002</span><span class="proto">PADO</span><span
-                    class="info">Offer (AC-Name)</span></div>
-                <div class="packet-log"><span class="time">0.003</span><span class="proto">PADR</span><span
-                    class="info">Request</span></div>
-                <div class="packet-log"><span class="time">0.005</span><span class="proto">PADS</span><span
-                    class="info">Session ID: 0x1A2B</span></div>
-
-                <div class="log-divider" style="margin-top:8px">Session Stage • ETH 0x8864</div>
-                <div class="packet-log"><span class="time">0.010</span><span class="proto">LCP</span><span
-                    class="info">Conf-Req (Magic)</span></div>
-                <div class="packet-log"><span class="time">0.012</span><span class="proto">LCP</span><span
-                    class="info">Conf-Ack (OK)</span></div>
-                <div class="packet-log"><span class="time">0.015</span><span class="proto">PAP</span><span
-                    class="info">Auth-Req (User)</span></div>
-                <div class="packet-log"><span class="time">0.018</span><span class="proto">PAP</span><span
-                    class="info">Auth-Ack (Success)</span></div>
-                <div class="packet-log"><span class="time">0.020</span><span class="proto">IPCP</span><span
-                    class="info">Conf-Req (IP=0)</span></div>
-                <div class="packet-log"><span class="time">0.022</span><span class="proto">IPCP</span><span
-                    class="info">Conf-Nak (Sugg IP)</span></div>
-                <div class="packet-log"><span class="time">0.025</span><span class="proto">IPCP</span><span
-                    class="info">Conf-Req (Accept)</span></div>
-                <div class="packet-log"><span class="time">0.028</span><span class="proto">IPCP</span><span
-                    class="info">Conf-Ack (Bound)</span></div>
+            <div class="mock-phone card clickable" id="overviewCard" title="点击查看详细报文流程">
+              <div class="chip muted">PPPoE Flow Analysis (Summary)</div>
+              <div class="screen" style="overflow:hidden; justify-content:center; gap:16px">
+                <div class="summary-item">
+                  <div class="summary-icon">DIS</div>
+                  <div>
+                    <div style="font-size:14px;font-weight:600">Discovery</div>
+                    <div class="muted" style="font-size:12px">PADI / PADO / PADR / PADS</div>
+                  </div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-icon">LCP</div>
+                  <div>
+                    <div style="font-size:14px;font-weight:600">Link Control</div>
+                    <div class="muted" style="font-size:12px">Magic Number / MRU</div>
+                  </div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-icon">AUTH</div>
+                  <div>
+                    <div style="font-size:14px;font-weight:600">Authentication</div>
+                    <div class="muted" style="font-size:12px">PAP / CHAP</div>
+                  </div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-icon">IPCP</div>
+                  <div>
+                    <div style="font-size:14px;font-weight:600">Network Layer</div>
+                    <div class="muted" style="font-size:12px">IP Address / DNS</div>
+                  </div>
+                </div>
+                <div style="text-align:center;font-size:12px;color:var(--accent);margin-top:8px">
+                  Click to view full packet flow ➜
+                </div>
               </div>
               <div style="display:flex;gap:10px;margin-top:10px;align-items:center;justify-content:space-between">
                 <div class="muted">Session ID: <b>0x1A2B</b></div>
@@ -600,8 +677,62 @@
     </div>
   </div>
 
+  <div class="modal" id="detailModal">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-weight:700;font-size:16px">PPPoE Full Packet Flow</div>
+        <div class="btn" style="padding:4px 8px;font-size:12px"
+          onclick="document.getElementById('detailModal').classList.remove('open')">✕</div>
+      </div>
+      <div class="screen" style="background:rgba(0,0,0,0.3)">
+        <div class="log-divider">Discovery Stage • ETH 0x8863</div>
+        <div class="packet-log"><span class="time">0.000</span><span class="proto">PADI</span><span
+            class="info">Broadcast</span></div>
+        <div class="packet-log"><span class="time">0.002</span><span class="proto">PADO</span><span class="info">Offer
+            (AC-Name)</span></div>
+        <div class="packet-log"><span class="time">0.003</span><span class="proto">PADR</span><span
+            class="info">Request</span></div>
+        <div class="packet-log"><span class="time">0.005</span><span class="proto">PADS</span><span class="info">Session
+            ID: 0x1A2B</span></div>
+
+        <div class="log-divider" style="margin-top:8px">Session Stage • ETH 0x8864</div>
+        <div class="packet-log"><span class="time">0.010</span><span class="proto">LCP</span><span class="info">Conf-Req
+            (Magic)</span></div>
+        <div class="packet-log"><span class="time">0.012</span><span class="proto">LCP</span><span class="info">Conf-Ack
+            (OK)</span></div>
+        <div class="packet-log"><span class="time">0.015</span><span class="proto">PAP</span><span class="info">Auth-Req
+            (User)</span></div>
+        <div class="packet-log"><span class="time">0.018</span><span class="proto">PAP</span><span class="info">Auth-Ack
+            (Success)</span></div>
+        <div class="packet-log"><span class="time">0.020</span><span class="proto">IPCP</span><span
+            class="info">Conf-Req (IP=0)</span></div>
+        <div class="packet-log"><span class="time">0.022</span><span class="proto">IPCP</span><span
+            class="info">Conf-Nak (Sugg IP)</span></div>
+        <div class="packet-log"><span class="time">0.025</span><span class="proto">IPCP</span><span
+            class="info">Conf-Req (Accept)</span></div>
+        <div class="packet-log"><span class="time">0.028</span><span class="proto">IPCP</span><span
+            class="info">Conf-Ack (Bound)</span></div>
+      </div>
+      <div style="margin-top:12px;text-align:center;font-size:12px;color:var(--muted)">
+        Click anywhere outside to close
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
+      // Modal Logic
+      const modal = document.getElementById('detailModal');
+      const card = document.getElementById('overviewCard');
+
+      card.addEventListener('click', () => {
+        modal.classList.add('open');
+      });
+
+      modal.addEventListener('click', () => {
+        modal.classList.remove('open');
+      });
+
       const slides = Array.from(document.querySelectorAll('.slide'));
       const total = slides.length;
       let idx = 0;
