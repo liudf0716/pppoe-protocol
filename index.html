@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PPPoE 拨号抓包流程 — 演示幻灯片</title>
+  <style>
+    :root{
+      --bg1:#0f172a; /* deep */
+      --bg2:#0b1220;
+      --accent:#ff9a28;
+      --cyan:#06b6d4;
+      --muted:#9aa6b2;
+      --card:#111827;
+      --glass: rgba(255,255,255,0.04);
+      --max-w:1200px;
+      --slide-transition: transform 700ms cubic-bezier(.2,.9,.2,1), opacity 450ms ease;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:#e6eef6}
+    .stage{
+      width:100%;height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 24px;box-sizing:border-box;
+    }
+    .deck{width:100%;max-width:var(--max-w);height:72vh;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 10px 40px rgba(2,6,23,0.7);overflow:hidden;position:relative}
+    .slides{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+    .slide{width:100%;height:100%;padding:44px;box-sizing:border-box;position:absolute;left:0;top:0;transform-origin:center center;display:flex;gap:28px;align-items:flex-start;justify-content:flex-start;}
+    .slide.inactive{opacity:0;pointer-events:none;transform:translateX(30px) scale(.98)}
+    .slide.active{opacity:1;pointer-events:auto;transform:translateX(0) scale(1)}
+
+    /* Left column content */
+    .left{flex:0 0 48%;display:flex;flex-direction:column;gap:16px}
+    .title{font-size:28px;font-weight:700;color:#fff;letter-spacing:0.2px}
+    .subtitle{color:var(--muted);font-size:13px}
+    .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 20px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.02)}
+    .bullet{display:flex;gap:12px;align-items:flex-start}
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);margin-top:6px}
+    .muted{color:var(--muted);font-size:13px}
+
+    /* Right column sample visuals */
+    .right{flex:1;display:flex;flex-direction:column;gap:12px;align-items:stretch}
+    .mock-phone{flex:1;border-radius:14px;background:linear-gradient(180deg,#071022,#0f2638);padding:16px;border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column}
+    .screen{flex:1;border-radius:10px;background:linear-gradient(180deg,#071a2a,#052033);display:flex;flex-direction:column;padding:14px;gap:8px}
+    .tweet{height:56px;border-radius:8px;background:linear-gradient(90deg, rgba(255,154,40,0.06), rgba(6,182,212,0.02));display:flex;align-items:center;padding:10px;gap:10px}
+    .chip{background:var(--glass);padding:6px 10px;border-radius:8px;font-size:12px;color:var(--muted)}
+
+    /* nav */
+    .nav{position:absolute;left:18px;bottom:18px;display:flex;gap:10px;align-items:center}
+    .btn{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.03);padding:8px 12px;border-radius:10px;color:var(--muted);cursor:pointer}
+    .btn:active{transform:translateY(1px)}
+    .pager{position:absolute;right:18px;bottom:18px;color:var(--muted);font-size:13px}
+
+    /* progress */
+    .progress{position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg, rgba(255,154,40,0.18), rgba(6,182,212,0.08));}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--cyan));width:0%;transition:width 600ms cubic-bezier(.2,.9,.2,1)}
+
+    /* header */
+    .deckHeader{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.02)}
+    .logo{display:flex;gap:12px;align-items:center}
+    .logoMark{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--cyan));display:flex;align-items:center;justify-content:center;font-weight:700}
+    .logoText{font-size:14px;font-weight:600}
+
+    /* small screens */
+    @media (max-width:900px){
+      .left{flex-basis:100%}
+      .right{display:none}
+      .slide{padding:20px}
+    }
+
+    /* code block style for protocol fields */
+    .proto{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:10px;font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;font-size:13px;color:#dbeafe}
+
+    /* subtle particles */
+    .particles{position:absolute;inset:0;pointer-events:none;opacity:0.5}
+    .particle{position:absolute;border-radius:50%;background:radial-gradient(circle at 30% 30%, rgba(255,154,40,0.12), rgba(255,154,40,0.02));width:80px;height:80px;filter:blur(14px)}
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="deck" role="application" aria-label="PPPoE 演示">
+
+      <div class="deckHeader">
+        <div class="logo">
+          <div class="logoMark">PJ</div>
+          <div>
+            <div class="logoText">PPPoE 拨号抓包分析</div>
+            <div class="muted" style="font-size:12px">技术演示 · Discovery / LCP / IPCP / LCP Echo</div>
+          </div>
+        </div>
+        <div class="muted">按 ← → 翻页 • 空格开始</div>
+      </div>
+
+      <div class="slides" id="slides">
+
+        <!-- Slide 1: Cover -->
+        <section class="slide active" data-index="0" id="s0">
+          <div class="left">
+            <div class="title">PPPoE 拨号全流程概览</div>
+            <div class="subtitle">从发现（Discovery）到链路（LCP）、网络（IPCP），再到保活（LCP Echo）——逐层抓包解析</div>
+            <div class="card">
+              <div class="muted">本演示包含：</div>
+              <div style="height:12px"></div>
+              <div class="bullet"><div class="dot"></div><div><b>PPPoE Discovery</b><div class="muted">PADI / PADO / PADR / PADS</div></div></div>
+              <div class="bullet"><div class="dot"></div><div><b>PPP LCP</b><div class="muted">Configure-Req/Ack/Nak、认证协商</div></div></div>
+              <div class="bullet"><div class="dot"></div><div><b>IPCP 深析</b><div class="muted">NAK 的语义、IP/DNS 分配、双向协商</div></div></div>
+              <div class="bullet"><div class="dot"></div><div><b>LCP Echo 保活</b><div class="muted">链路存活检测与超时策略</div></div></div>
+            </div>
+          </div>
+          <div class="right">
+            <div class="mock-phone card">
+              <div class="chip muted">PPPoE Session • ETH 0x8864</div>
+              <div class="screen">
+                <div class="tweet"></div>
+                <div class="tweet"></div>
+                <div class="tweet"></div>
+                <div style="display:flex;gap:8px;align-items:center"><div class="chip">PADI →</div><div class="chip">PADO ←</div><div class="chip">PADR →</div><div class="chip">PADS ←</div></div>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:10px;align-items:center;justify-content:space-between">
+                <div class="muted">Session ID: <b>0x1A2B</b></div>
+                <div class="chip">ppp0 • up</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Slide 2: Discovery deep -->
+        <section class="slide inactive" data-index="1" id="s1">
+          <div class="left">
+            <div class="title">PPPoE Discovery（抓包要点）</div>
+            <div class="subtitle">PADI → PADO → PADR → PADS：建立 Session ID</div>
+            <div class="card">
+              <div class="muted">抓包字段速览：</div>
+              <div style="height:8px"></div>
+              <div class="proto">PADI: Eth dst = FF:FF:FF:FF:FF:FF • Code=0x09 • Service-Name=""</div>
+              <div style="height:8px"></div>
+              <div class="proto">PADO: unicast to client • AC-Name / Service-Name</div>
+              <div style="height:8px"></div>
+              <div class="proto">PADS: Session ID appears • switch to EtherType 0x8864</div>
+            </div>
+          </div>
+          <div class="right">
+            <div class="mock-phone card">
+              <div class="chip muted">Ethernet Discovery • 0x8863</div>
+              <div class="screen">
+                <div class="chip">PADI (broadcast)</div>
+                <div class="chip">PADO (AC reply)</div>
+                <div class="chip">PADR (select)</div>
+                <div class="chip">PADS (session)</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Slide 3: LCP -->
+        <section class="slide inactive" data-index="2" id="s2">
+          <div class="left">
+            <div class="title">PPP LCP（链路协商）</div>
+            <div class="subtitle">协商 MRU、Magic Number、Auth Protocol 等</div>
+            <div class="card">
+              <div class="muted">典型抓包流程：</div>
+              <div class="proto">Client: LCP Configure-Request (MRU=1492, Magic=0x12345678, Auth=CHAP)</div>
+              <div class="proto">Server: LCP Configure-Ack / Nak / Reject</div>
+              <div class="proto">Authentication: CHAP / PAP / EAP</div>
+            </div>
+          </div>
+          <div class="right">
+            <div class="card mock-phone">
+              <div class="chip muted">LCP • Protocol 0xC021</div>
+              <div class="screen">
+                <div class="chip">Configure-Request</div>
+                <div class="chip">Configure-Ack</div>
+                <div class="chip">Authenticate</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Slide 4: IPCP deep -->
+        <section class="slide inactive" data-index="3" id="s3">
+          <div class="left">
+            <div class="title">IPCP 深度解析（逐字段）</div>
+            <div class="subtitle">NAK 的语义、双向协商、最终生效时刻</div>
+            <div class="card">
+              <div class="muted">抓包中注意：</div>
+              <div class="proto">Client → Conf-Req (IP=0.0.0.0, DNS=0.0.0.0)</div>
+              <div class="proto">Server → Conf-Nak (suggested IP, suggested DNS)</div>
+              <div class="proto">Client → Conf-Req (use suggested)</div>
+              <div class="proto">Server → Conf-Ack</div>
+              <div class="proto">Server → Conf-Req (final IP, DNS1, DNS2)  // server's own request</div>
+              <div class="proto">Client → Conf-Ack (ack server's request)  // final effective</div>
+            </div>
+          </div>
+          <div class="right">
+            <div class="card mock-phone">
+              <div class="chip muted">IPCP • Protocol 0x8021</div>
+              <div class="screen">
+                <div class="chip">Conf-Req • IP=0.0.0.0</div>
+                <div class="chip">Conf-Nak • suggest IP</div>
+                <div class="chip">Conf-Req • client uses suggest</div>
+                <div class="chip">Conf-Ack</div>
+                <div class="chip">Conf-Req • server assigns final IP/DNS</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Slide 5: LCP Echo -->
+        <section class="slide inactive" data-index="4" id="s4">
+          <div class="left">
+            <div class="title">LCP Echo 保活与脱落检测</div>
+            <div class="subtitle">定期 Echo-Request / Echo-Reply，超时重新拨号</div>
+            <div class="card">
+              <div class="muted">常见参数：</div>
+              <div class="proto">Interval: 10s • Retry: 3~5 • If no reply → consider link dead</div>
+              <div class="proto">Wireshark: LCP Echo-Request (Code=9) / Echo-Reply (Code=10)</div>
+            </div>
+          </div>
+          <div class="right">
+            <div class="card mock-phone">
+              <div class="chip muted">Keepalive</div>
+              <div class="screen">
+                <div class="chip">Echo-Request →</div>
+                <div class="chip">Echo-Reply ←</div>
+                <div class="chip muted">No reply → teardown</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Slide 6: Troubleshooting & Summary -->
+        <section class="slide inactive" data-index="5" id="s5">
+          <div class="left">
+            <div class="title">故障排查要点 & 总结</div>
+            <div class="subtitle">抓包优先级：Discovery → LCP → Auth → IPCP → Echo</div>
+            <div class="card">
+              <div class="muted">常见问题：</div>
+              <div class="bullet"><div class="dot"></div><div><b>PADO 不回应</b><div class="muted">物理/交换/ VLAN 问题</div></div></div>
+              <div class="bullet"><div class="dot"></div><div><b>LCP 超时</b><div class="muted">MRU/魔术字/认证失败</div></div></div>
+              <div class="bullet"><div class="dot"></div><div><b>IPCP Nak 循环</b><div class="muted">RADIUS / IP pool 异常</div></div></div>
+              <div style="height:8px"></div>
+              <div class="muted">要点：确认最终被 <b>Configure-Ack</b> 的参数才算生效；NAK 只是建议。</div>
+            </div>
+          </div>
+          <div class="right">
+            <div class="card mock-phone">
+              <div class="chip muted">Tips</div>
+              <div class="screen">
+                <div class="chip">使用 tshark 导出 IPCP 选项</div>
+                <div class="chip">对照 RADIUS 日志</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="nav">
+        <button class="btn" id="prev">← Prev</button>
+        <button class="btn" id="next">Next →</button>
+      </div>
+      <div class="pager" id="pager">1 / 6</div>
+      <div class="progress"><i id="progressBar"></i></div>
+
+      <div class="particles" aria-hidden="true">
+        <div class="particle" style="left:10%;top:10%;width:120px;height:120px;opacity:0.12"></div>
+        <div class="particle" style="left:70%;top:20%;width:80px;height:80px;opacity:0.08"></div>
+        <div class="particle" style="left:50%;top:70%;width:140px;height:140px;opacity:0.05"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const total = slides.length;
+      let idx = 0;
+      const pager = document.getElementById('pager');
+      const progress = document.getElementById('progressBar');
+      function show(i){
+        slides.forEach(s=>s.classList.add('inactive'));
+        slides.forEach(s=>s.classList.remove('active'));
+        const s = slides[i];
+        s.classList.remove('inactive');
+        s.classList.add('active');
+        idx = i;
+        pager.textContent = (i+1) + ' / ' + total;
+        const pct = Math.round(((i)/(total-1))*100);
+        progress.style.width = pct + '%';
+      }
+      document.getElementById('next').addEventListener('click',()=>show(Math.min(idx+1,total-1)));
+      document.getElementById('prev').addEventListener('click',()=>show(Math.max(idx-1,0)));
+      document.addEventListener('keydown',e=>{
+        if(e.key==='ArrowRight' || e.key==='PageDown' || e.code==='Space'){
+          e.preventDefault(); show(Math.min(idx+1,total-1));
+        }
+        if(e.key==='ArrowLeft' || e.key==='PageUp'){
+          e.preventDefault(); show(Math.max(idx-1,0));
+        }
+      });
+      // touch swipe
+      let startX=0;document.addEventListener('touchstart',e=>startX=e.touches[0].clientX);
+      document.addEventListener('touchend',e=>{const dx=(e.changedTouches[0].clientX-startX); if(dx<-40) show(Math.min(idx+1,total-1)); if(dx>40) show(Math.max(idx-1,0));});
+
+      // click to start first slide animation
+      show(0);
+    })();
+  </script>
+</body>
+</html>
