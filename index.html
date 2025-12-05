@@ -718,21 +718,84 @@
         <section class="slide inactive" data-index="2" id="s2">
           <div class="left">
             <div class="title">PPP LCP（链路协商）</div>
-            <div class="subtitle">协商 MRU、Magic Number、Auth Protocol 等</div>
-            <div class="card">
-              <div class="muted">典型抓包流程：</div>
-              <div class="proto">Client: LCP Configure-Request (MRU=1492, Magic=0x12345678, Auth=CHAP)</div>
-              <div class="proto">Server: LCP Configure-Ack / Nak / Reject</div>
-              <div class="proto">Authentication: PAP (Cleartext) / CHAP (MD5) / MS-CHAPv2</div>
+            <div class="subtitle">双向协商 MRU、Magic Number、Auth Protocol</div>
+            <div class="card" style="display:flex;flex-direction:column;gap:12px">
+              <div class="muted">LCP 协商分为三个阶段：</div>
+
+              <div class="summary-item">
+                <div class="summary-icon">REQ</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Bidirectional Request</div>
+                  <div class="muted" style="font-size:12px">Both sides send Conf-Req</div>
+                </div>
+              </div>
+
+              <div class="summary-item">
+                <div class="summary-icon" style="color:var(--cyan)">ACK</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Bidirectional Ack</div>
+                  <div class="muted" style="font-size:12px">Must Ack peer's params</div>
+                </div>
+              </div>
+
+              <div class="summary-item">
+                <div class="summary-icon">AUTH</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Authentication</div>
+                  <div class="muted" style="font-size:12px">PAP / CHAP (After LCP Open)</div>
+                </div>
+              </div>
+
+              <div style="height:1px;background:rgba(255,255,255,0.1);margin:4px 0"></div>
+              <div class="muted" style="font-size:12px">
+                注：最终认证方式以 Server 端 Conf-Req 中指定的为准（通常是 PAP/CHAP）。
+              </div>
             </div>
           </div>
           <div class="right">
-            <div class="card mock-phone">
-              <div class="chip muted">LCP • Protocol 0xC021</div>
+            <div class="mock-phone card">
+              <div class="chip muted">LCP Negotiation • 0xC021</div>
               <div class="screen">
-                <div class="chip">Configure-Request</div>
-                <div class="chip">Configure-Ack</div>
-                <div class="chip">Authenticate</div>
+                <div class="log-divider">Phase 1: Configure</div>
+
+                <div class="packet-log">
+                  <span class="time">0.010</span>
+                  <span class="proto">LCP</span>
+                  <span class="info">C→S Conf-Req (MRU=1480 MAGIC NUM=0x12345678)</span>
+                </div>
+
+                <div class="packet-log">
+                  <span class="time">0.010</span>
+                  <span class="proto" style="color:var(--cyan)">LCP</span>
+                  <span class="info">S→C Conf-Req (MRU=1480 MAGIC NUM=0x87abce00 Auth=PAP)</span>
+                </div>
+
+                <div class="packet-log">
+                  <span class="time">0.012</span>
+                  <span class="proto" style="color:var(--cyan)">LCP</span>
+                  <span class="info">S→C Conf-Ack (MRU=1480 MAGIC NUM=0x12345678)</span>
+                </div>
+
+                <div class="packet-log">
+                  <span class="time">0.012</span>
+                  <span class="proto">LCP</span>
+                  <span class="info">C→S Conf-Ack (MRU=1480 MAGIC NUM=0x87abce00)</span>
+                </div>
+
+                <div class="log-divider" style="margin-top:12px">Phase 2: Authenticate</div>
+
+                <div class="packet-log">
+                  <span class="time">0.015</span>
+                  <span class="proto">PAP</span>
+                  <span class="info">C→S Auth-Req (User/Pass)</span>
+                </div>
+
+                <div class="packet-log">
+                  <span class="time">0.018</span>
+                  <span class="proto" style="color:var(--cyan)">PAP</span>
+                  <span class="info">S→C Auth-Ack (Success)</span>
+                </div>
+
               </div>
             </div>
           </div>
