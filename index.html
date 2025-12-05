@@ -376,11 +376,12 @@
     /* Server -> Client */
     .s2c .arrow {
       right: 42px;
+      background: var(--cyan);
     }
 
     .s2c .arrow::after {
       left: -5px;
-      border-right: 8px solid var(--accent);
+      border-right: 8px solid var(--cyan);
     }
 
     .msg-text {
@@ -870,9 +871,11 @@
           row.className = `seq-msg ${p.dir}`;
           row.style.top = topOffset + 'px';
 
+          const color = p.dir === 's2c' ? 'var(--cyan)' : 'var(--accent)';
+
           const text = document.createElement('div');
           text.className = 'msg-text';
-          text.innerHTML = `<span style="color:var(--accent);font-weight:bold">${p.proto}</span> ${p.info}`;
+          text.innerHTML = `<span style="color:${color};font-weight:bold">${p.proto}</span> ${p.info}`;
 
           const time = document.createElement('div');
           time.className = 'msg-time';
