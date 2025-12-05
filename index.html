@@ -157,7 +157,8 @@
       display: flex;
       flex-direction: column;
       padding: 14px;
-      gap: 8px
+      gap: 8px;
+      overflow-y: auto
     }
 
     .tweet {
@@ -388,11 +389,27 @@
                 <div class="packet-log"><span class="time">0.000</span><span class="proto">PADI</span><span
                     class="info">Broadcast</span></div>
                 <div class="packet-log"><span class="time">0.002</span><span class="proto">PADO</span><span
-                    class="info">AC-Name: BRAS-01</span></div>
+                    class="info">Offer (AC-Name)</span></div>
                 <div class="packet-log"><span class="time">0.003</span><span class="proto">PADR</span><span
-                    class="info">Request Session</span></div>
+                    class="info">Request</span></div>
                 <div class="packet-log"><span class="time">0.005</span><span class="proto">PADS</span><span
                     class="info">Session ID: 0x1A2B</span></div>
+                <div class="packet-log"><span class="time">0.010</span><span class="proto">LCP</span><span
+                    class="info">Conf-Req (Magic)</span></div>
+                <div class="packet-log"><span class="time">0.012</span><span class="proto">LCP</span><span
+                    class="info">Conf-Ack (OK)</span></div>
+                <div class="packet-log"><span class="time">0.015</span><span class="proto">PAP</span><span
+                    class="info">Auth-Req (User)</span></div>
+                <div class="packet-log"><span class="time">0.018</span><span class="proto">PAP</span><span
+                    class="info">Auth-Ack (Success)</span></div>
+                <div class="packet-log"><span class="time">0.020</span><span class="proto">IPCP</span><span
+                    class="info">Conf-Req (IP=0)</span></div>
+                <div class="packet-log"><span class="time">0.022</span><span class="proto">IPCP</span><span
+                    class="info">Conf-Nak (Sugg IP)</span></div>
+                <div class="packet-log"><span class="time">0.025</span><span class="proto">IPCP</span><span
+                    class="info">Conf-Req (Accept)</span></div>
+                <div class="packet-log"><span class="time">0.028</span><span class="proto">IPCP</span><span
+                    class="info">Conf-Ack (Bound)</span></div>
               </div>
               <div style="display:flex;gap:10px;margin-top:10px;align-items:center;justify-content:space-between">
                 <div class="muted">Session ID: <b>0x1A2B</b></div>
