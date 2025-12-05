@@ -207,6 +207,19 @@
       color: var(--muted)
     }
 
+    .log-divider {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin: 4px 0;
+      font-weight: 600;
+      align-self: flex-start;
+    }
+
     /* nav */
     .nav {
       position: absolute;
@@ -384,8 +397,9 @@
           </div>
           <div class="right">
             <div class="mock-phone card">
-              <div class="chip muted">PPPoE Session • ETH 0x8864</div>
+              <div class="chip muted">PPPoE Flow Analysis</div>
               <div class="screen">
+                <div class="log-divider">Discovery Stage • ETH 0x8863</div>
                 <div class="packet-log"><span class="time">0.000</span><span class="proto">PADI</span><span
                     class="info">Broadcast</span></div>
                 <div class="packet-log"><span class="time">0.002</span><span class="proto">PADO</span><span
@@ -394,6 +408,8 @@
                     class="info">Request</span></div>
                 <div class="packet-log"><span class="time">0.005</span><span class="proto">PADS</span><span
                     class="info">Session ID: 0x1A2B</span></div>
+
+                <div class="log-divider" style="margin-top:8px">Session Stage • ETH 0x8864</div>
                 <div class="packet-log"><span class="time">0.010</span><span class="proto">LCP</span><span
                     class="info">Conf-Req (Magic)</span></div>
                 <div class="packet-log"><span class="time">0.012</span><span class="proto">LCP</span><span
