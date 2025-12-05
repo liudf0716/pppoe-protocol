@@ -626,29 +626,89 @@
           <div class="left">
             <div class="title">PPPoE Discovery & Termination</div>
             <div class="subtitle">PADI → PADO → PADR → PADS (建立) / PADT (断开)</div>
-            <div class="card">
-              <div class="muted">抓包字段速览：</div>
-              <div style="height:8px"></div>
-              <div class="proto">PADI: Eth dst = FF:FF:FF:FF:FF:FF • Code=0x09 • Service-Name=""</div>
-              <div style="height:8px"></div>
-              <div class="proto">PADO: unicast to client • AC-Name / Service-Name</div>
-              <div style="height:8px"></div>
-              <div class="proto">PADR: unicast to server • Request specific AC / Service</div>
-              <div style="height:8px"></div>
-              <div class="proto">PADS: Session ID appears • switch to EtherType 0x8864</div>
-              <div style="height:8px"></div>
-              <div class="proto">PADT: Terminate Session • EtherType 0x8863 • Code 0xA7</div>
+            <div class="card" style="display:flex;flex-direction:column;gap:12px">
+              <div class="muted">Discovery 阶段交互细节：</div>
+
+              <div class="summary-item">
+                <div class="summary-icon">PADI</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Initiation (Broadcast)</div>
+                  <div class="muted" style="font-size:12px">Code=0x09 • Find ACs</div>
+                </div>
+              </div>
+
+              <div class="summary-item">
+                <div class="summary-icon" style="color:var(--cyan)">PADO</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Offer (Unicast)</div>
+                  <div class="muted" style="font-size:12px">AC-Name / Service-Name</div>
+                </div>
+              </div>
+
+              <div class="summary-item">
+                <div class="summary-icon">PADR</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Request (Unicast)</div>
+                  <div class="muted" style="font-size:12px">Select specific AC</div>
+                </div>
+              </div>
+
+              <div class="summary-item">
+                <div class="summary-icon" style="color:var(--cyan)">PADS</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Session Confirm</div>
+                  <div class="muted" style="font-size:12px">Session ID assigned</div>
+                </div>
+              </div>
+
+              <div class="summary-item">
+                <div class="summary-icon" style="color:#ef4444">PADT</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Terminate</div>
+                  <div class="muted" style="font-size:12px">Sent by Client or Server</div>
+                </div>
+              </div>
+
             </div>
           </div>
           <div class="right">
             <div class="mock-phone card">
               <div class="chip muted">Ethernet Discovery • 0x8863</div>
               <div class="screen">
-                <div class="chip">PADI (broadcast)</div>
-                <div class="chip">PADO (AC reply)</div>
-                <div class="chip">PADR (select)</div>
-                <div class="chip">PADS (session)</div>
-                <div class="chip" style="border-color:var(--accent);color:var(--accent)">PADT (terminate)</div>
+                <div class="log-divider">Packet Capture</div>
+
+                <div class="packet-log">
+                  <span class="time">0.000</span>
+                  <span class="proto">PADI</span>
+                  <span class="info">Dst: Broadcast (FF:FF:..)</span>
+                </div>
+
+                <div class="packet-log">
+                  <span class="time">0.002</span>
+                  <span class="proto" style="color:var(--cyan)">PADO</span>
+                  <span class="info">Dst: Client (Unicast)</span>
+                </div>
+
+                <div class="packet-log">
+                  <span class="time">0.003</span>
+                  <span class="proto">PADR</span>
+                  <span class="info">Dst: Server (Unicast)</span>
+                </div>
+
+                <div class="packet-log">
+                  <span class="time">0.005</span>
+                  <span class="proto" style="color:var(--cyan)">PADS</span>
+                  <span class="info">Session ID: 0x1A2B</span>
+                </div>
+
+                <div class="log-divider" style="margin-top:12px">Teardown</div>
+
+                <div class="packet-log">
+                  <span class="time">10.50</span>
+                  <span class="proto" style="color:#ef4444">PADT</span>
+                  <span class="info">Code: 0xA7 (Term Req)</span>
+                </div>
+
               </div>
             </div>
           </div>
