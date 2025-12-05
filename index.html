@@ -1,79 +1,335 @@
 <!doctype html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PPPoE 拨号抓包流程 — 演示幻灯片</title>
   <style>
-    :root{
-      --bg1:#0f172a; /* deep */
-      --bg2:#0b1220;
-      --accent:#ff9a28;
-      --cyan:#06b6d4;
-      --muted:#9aa6b2;
-      --card:#111827;
-      --glass: rgba(255,255,255,0.04);
-      --max-w:1200px;
-      --slide-transition: transform 700ms cubic-bezier(.2,.9,.2,1), opacity 450ms ease;
+    :root {
+      --bg1: #0f172a;
+      /* deep */
+      --bg2: #0b1220;
+      --accent: #ff9a28;
+      --cyan: #06b6d4;
+      --muted: #9aa6b2;
+      --card: #111827;
+      --glass: rgba(255, 255, 255, 0.04);
+      --max-w: 1200px;
+      --slide-transition: transform 700ms cubic-bezier(.2, .9, .2, 1), opacity 450ms ease;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
     }
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:#e6eef6}
-    .stage{
-      width:100%;height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 24px;box-sizing:border-box;
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      background: linear-gradient(180deg, var(--bg1), var(--bg2));
+      color: #e6eef6
     }
-    .deck{width:100%;max-width:var(--max-w);height:72vh;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 10px 40px rgba(2,6,23,0.7);overflow:hidden;position:relative}
-    .slides{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
-    .slide{width:100%;height:100%;padding:44px;box-sizing:border-box;position:absolute;left:0;top:0;transform-origin:center center;display:flex;gap:28px;align-items:flex-start;justify-content:flex-start;}
-    .slide.inactive{opacity:0;pointer-events:none;transform:translateX(30px) scale(.98)}
-    .slide.active{opacity:1;pointer-events:auto;transform:translateX(0) scale(1)}
+
+    .stage {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      box-sizing: border-box;
+    }
+
+    .deck {
+      width: 100%;
+      max-width: var(--max-w);
+      height: 72vh;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+      box-shadow: 0 10px 40px rgba(2, 6, 23, 0.7);
+      overflow: hidden;
+      position: relative
+    }
+
+    .slides {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .slide {
+      width: 100%;
+      height: 100%;
+      padding: 44px;
+      box-sizing: border-box;
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform-origin: center center;
+      display: flex;
+      gap: 28px;
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+
+    .slide.inactive {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(30px) scale(.98)
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0) scale(1)
+    }
 
     /* Left column content */
-    .left{flex:0 0 48%;display:flex;flex-direction:column;gap:16px}
-    .title{font-size:28px;font-weight:700;color:#fff;letter-spacing:0.2px}
-    .subtitle{color:var(--muted);font-size:13px}
-    .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 20px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.02)}
-    .bullet{display:flex;gap:12px;align-items:flex-start}
-    .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);margin-top:6px}
-    .muted{color:var(--muted);font-size:13px}
+    .left {
+      flex: 0 0 48%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.2px
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px
+    }
+
+    .card {
+      background: var(--card);
+      padding: 18px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(2, 6, 23, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.02)
+    }
+
+    .bullet {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: 6px
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px
+    }
 
     /* Right column sample visuals */
-    .right{flex:1;display:flex;flex-direction:column;gap:12px;align-items:stretch}
-    .mock-phone{flex:1;border-radius:14px;background:linear-gradient(180deg,#071022,#0f2638);padding:16px;border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column}
-    .screen{flex:1;border-radius:10px;background:linear-gradient(180deg,#071a2a,#052033);display:flex;flex-direction:column;padding:14px;gap:8px}
-    .tweet{height:56px;border-radius:8px;background:linear-gradient(90deg, rgba(255,154,40,0.06), rgba(6,182,212,0.02));display:flex;align-items:center;padding:10px;gap:10px}
-    .chip{background:var(--glass);padding:6px 10px;border-radius:8px;font-size:12px;color:var(--muted)}
+    .right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: stretch
+    }
+
+    .mock-phone {
+      flex: 1;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #071022, #0f2638);
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      display: flex;
+      flex-direction: column
+    }
+
+    .screen {
+      flex: 1;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #071a2a, #052033);
+      display: flex;
+      flex-direction: column;
+      padding: 14px;
+      gap: 8px
+    }
+
+    .tweet {
+      display: none
+    }
+
+    .packet-log {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      font-size: 12px;
+      font-family: ui-monospace, monospace
+    }
+
+    .packet-log:last-child {
+      border-bottom: none
+    }
+
+    .packet-log .time {
+      color: var(--muted);
+      width: 45px;
+      flex-shrink: 0
+    }
+
+    .packet-log .proto {
+      color: var(--accent);
+      font-weight: 600;
+      width: 40px;
+      flex-shrink: 0
+    }
+
+    .packet-log .info {
+      color: #cbd5e1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .chip {
+      background: var(--glass);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--muted)
+    }
 
     /* nav */
-    .nav{position:absolute;left:18px;bottom:18px;display:flex;gap:10px;align-items:center}
-    .btn{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.03);padding:8px 12px;border-radius:10px;color:var(--muted);cursor:pointer}
-    .btn:active{transform:translateY(1px)}
-    .pager{position:absolute;right:18px;bottom:18px;color:var(--muted);font-size:13px}
+    .nav {
+      position: absolute;
+      left: 18px;
+      bottom: 18px;
+      display: flex;
+      gap: 10px;
+      align-items: center
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      padding: 8px 12px;
+      border-radius: 10px;
+      color: var(--muted);
+      cursor: pointer
+    }
+
+    .btn:active {
+      transform: translateY(1px)
+    }
+
+    .pager {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      color: var(--muted);
+      font-size: 13px
+    }
 
     /* progress */
-    .progress{position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg, rgba(255,154,40,0.18), rgba(6,182,212,0.08));}
-    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--cyan));width:0%;transition:width 600ms cubic-bezier(.2,.9,.2,1)}
+    .progress {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 4px;
+      background: linear-gradient(90deg, rgba(255, 154, 40, 0.18), rgba(6, 182, 212, 0.08));
+    }
+
+    .progress>i {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--cyan));
+      width: 0%;
+      transition: width 600ms cubic-bezier(.2, .9, .2, 1)
+    }
 
     /* header */
-    .deckHeader{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.02)}
-    .logo{display:flex;gap:12px;align-items:center}
-    .logoMark{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--cyan));display:flex;align-items:center;justify-content:center;font-weight:700}
-    .logoText{font-size:14px;font-weight:600}
+    .deckHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.02)
+    }
+
+    .logo {
+      display: flex;
+      gap: 12px;
+      align-items: center
+    }
+
+    .logoMark {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--cyan));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700
+    }
+
+    .logoText {
+      font-size: 14px;
+      font-weight: 600
+    }
 
     /* small screens */
-    @media (max-width:900px){
-      .left{flex-basis:100%}
-      .right{display:none}
-      .slide{padding:20px}
+    @media (max-width:900px) {
+      .left {
+        flex-basis: 100%
+      }
+
+      .right {
+        display: none
+      }
+
+      .slide {
+        padding: 20px
+      }
     }
 
     /* code block style for protocol fields */
-    .proto{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:10px;font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;font-size:13px;color:#dbeafe}
+    .proto {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+      padding: 12px;
+      border-radius: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+      font-size: 13px;
+      color: #dbeafe
+    }
 
     /* subtle particles */
-    .particles{position:absolute;inset:0;pointer-events:none;opacity:0.5}
-    .particle{position:absolute;border-radius:50%;background:radial-gradient(circle at 30% 30%, rgba(255,154,40,0.12), rgba(255,154,40,0.02));width:80px;height:80px;filter:blur(14px)}
+    .particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.5
+    }
+
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 154, 40, 0.12), rgba(255, 154, 40, 0.02));
+      width: 80px;
+      height: 80px;
+      filter: blur(14px)
+    }
   </style>
 </head>
+
 <body>
   <div class="stage">
     <div class="deck" role="application" aria-label="PPPoE 演示">
@@ -99,20 +355,44 @@
             <div class="card">
               <div class="muted">本演示包含：</div>
               <div style="height:12px"></div>
-              <div class="bullet"><div class="dot"></div><div><b>PPPoE Discovery</b><div class="muted">PADI / PADO / PADR / PADS</div></div></div>
-              <div class="bullet"><div class="dot"></div><div><b>PPP LCP</b><div class="muted">Configure-Req/Ack/Nak、认证协商</div></div></div>
-              <div class="bullet"><div class="dot"></div><div><b>IPCP 深析</b><div class="muted">NAK 的语义、IP/DNS 分配、双向协商</div></div></div>
-              <div class="bullet"><div class="dot"></div><div><b>LCP Echo 保活</b><div class="muted">链路存活检测与超时策略</div></div></div>
+              <div class="bullet">
+                <div class="dot"></div>
+                <div><b>PPPoE Discovery</b>
+                  <div class="muted">PADI / PADO / PADR / PADS / PADT</div>
+                </div>
+              </div>
+              <div class="bullet">
+                <div class="dot"></div>
+                <div><b>PPP LCP</b>
+                  <div class="muted">Configure-Req/Ack/Nak、认证协商</div>
+                </div>
+              </div>
+              <div class="bullet">
+                <div class="dot"></div>
+                <div><b>IPCP 深析</b>
+                  <div class="muted">NAK 的语义、IP/DNS 分配、双向协商</div>
+                </div>
+              </div>
+              <div class="bullet">
+                <div class="dot"></div>
+                <div><b>LCP Echo 保活</b>
+                  <div class="muted">链路存活检测与超时策略</div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="right">
             <div class="mock-phone card">
               <div class="chip muted">PPPoE Session • ETH 0x8864</div>
               <div class="screen">
-                <div class="tweet"></div>
-                <div class="tweet"></div>
-                <div class="tweet"></div>
-                <div style="display:flex;gap:8px;align-items:center"><div class="chip">PADI →</div><div class="chip">PADO ←</div><div class="chip">PADR →</div><div class="chip">PADS ←</div></div>
+                <div class="packet-log"><span class="time">0.000</span><span class="proto">PADI</span><span
+                    class="info">Broadcast</span></div>
+                <div class="packet-log"><span class="time">0.002</span><span class="proto">PADO</span><span
+                    class="info">AC-Name: BRAS-01</span></div>
+                <div class="packet-log"><span class="time">0.003</span><span class="proto">PADR</span><span
+                    class="info">Request Session</span></div>
+                <div class="packet-log"><span class="time">0.005</span><span class="proto">PADS</span><span
+                    class="info">Session ID: 0x1A2B</span></div>
               </div>
               <div style="display:flex;gap:10px;margin-top:10px;align-items:center;justify-content:space-between">
                 <div class="muted">Session ID: <b>0x1A2B</b></div>
@@ -125,8 +405,8 @@
         <!-- Slide 2: Discovery deep -->
         <section class="slide inactive" data-index="1" id="s1">
           <div class="left">
-            <div class="title">PPPoE Discovery（抓包要点）</div>
-            <div class="subtitle">PADI → PADO → PADR → PADS：建立 Session ID</div>
+            <div class="title">PPPoE Discovery & Termination</div>
+            <div class="subtitle">PADI → PADO → PADR → PADS (建立) / PADT (断开)</div>
             <div class="card">
               <div class="muted">抓包字段速览：</div>
               <div style="height:8px"></div>
@@ -135,6 +415,8 @@
               <div class="proto">PADO: unicast to client • AC-Name / Service-Name</div>
               <div style="height:8px"></div>
               <div class="proto">PADS: Session ID appears • switch to EtherType 0x8864</div>
+              <div style="height:8px"></div>
+              <div class="proto">PADT: Terminate Session • EtherType 0x8863 • Code 0xA7</div>
             </div>
           </div>
           <div class="right">
@@ -145,6 +427,7 @@
                 <div class="chip">PADO (AC reply)</div>
                 <div class="chip">PADR (select)</div>
                 <div class="chip">PADS (session)</div>
+                <div class="chip" style="border-color:var(--accent);color:var(--accent)">PADT (terminate)</div>
               </div>
             </div>
           </div>
@@ -159,7 +442,7 @@
               <div class="muted">典型抓包流程：</div>
               <div class="proto">Client: LCP Configure-Request (MRU=1492, Magic=0x12345678, Auth=CHAP)</div>
               <div class="proto">Server: LCP Configure-Ack / Nak / Reject</div>
-              <div class="proto">Authentication: CHAP / PAP / EAP</div>
+              <div class="proto">Authentication: PAP (Cleartext) / CHAP (MD5) / MS-CHAPv2</div>
             </div>
           </div>
           <div class="right">
@@ -182,22 +465,22 @@
             <div class="card">
               <div class="muted">抓包中注意：</div>
               <div class="proto">Client → Conf-Req (IP=0.0.0.0, DNS=0.0.0.0)</div>
-              <div class="proto">Server → Conf-Nak (suggested IP, suggested DNS)</div>
-              <div class="proto">Client → Conf-Req (use suggested)</div>
-              <div class="proto">Server → Conf-Ack</div>
-              <div class="proto">Server → Conf-Req (final IP, DNS1, DNS2)  // server's own request</div>
-              <div class="proto">Client → Conf-Ack (ack server's request)  // final effective</div>
+              <div class="proto">Server → Conf-Nak (suggested IP for Client)</div>
+              <div class="proto">Client → Conf-Req (request suggested IP)</div>
+              <div class="proto">Server → Conf-Ack (Client IP assigned)</div>
+              <div class="proto">Server → Conf-Req (Server's own IP)</div>
+              <div class="proto">Client → Conf-Ack (Ack Server's IP)</div>
             </div>
           </div>
           <div class="right">
             <div class="card mock-phone">
               <div class="chip muted">IPCP • Protocol 0x8021</div>
               <div class="screen">
-                <div class="chip">Conf-Req • IP=0.0.0.0</div>
-                <div class="chip">Conf-Nak • suggest IP</div>
-                <div class="chip">Conf-Req • client uses suggest</div>
-                <div class="chip">Conf-Ack</div>
-                <div class="chip">Conf-Req • server assigns final IP/DNS</div>
+                <div class="chip">Client Conf-Req (0.0.0.0)</div>
+                <div class="chip">Server Conf-Nak (Suggest IP)</div>
+                <div class="chip">Client Conf-Req (Suggested)</div>
+                <div class="chip">Server Conf-Ack (OK)</div>
+                <div class="chip">Server Conf-Req (Server IP)</div>
               </div>
             </div>
           </div>
@@ -233,9 +516,24 @@
             <div class="subtitle">抓包优先级：Discovery → LCP → Auth → IPCP → Echo</div>
             <div class="card">
               <div class="muted">常见问题：</div>
-              <div class="bullet"><div class="dot"></div><div><b>PADO 不回应</b><div class="muted">物理/交换/ VLAN 问题</div></div></div>
-              <div class="bullet"><div class="dot"></div><div><b>LCP 超时</b><div class="muted">MRU/魔术字/认证失败</div></div></div>
-              <div class="bullet"><div class="dot"></div><div><b>IPCP Nak 循环</b><div class="muted">RADIUS / IP pool 异常</div></div></div>
+              <div class="bullet">
+                <div class="dot"></div>
+                <div><b>PADO 不回应</b>
+                  <div class="muted">物理/交换/ VLAN 问题</div>
+                </div>
+              </div>
+              <div class="bullet">
+                <div class="dot"></div>
+                <div><b>LCP 超时</b>
+                  <div class="muted">MRU/魔术字/认证失败</div>
+                </div>
+              </div>
+              <div class="bullet">
+                <div class="dot"></div>
+                <div><b>IPCP Nak 循环</b>
+                  <div class="muted">RADIUS / IP pool 异常</div>
+                </div>
+              </div>
               <div style="height:8px"></div>
               <div class="muted">要点：确认最终被 <b>Configure-Ack</b> 的参数才算生效；NAK 只是建议。</div>
             </div>
@@ -270,40 +568,41 @@
   </div>
 
   <script>
-    (function(){
+    (function () {
       const slides = Array.from(document.querySelectorAll('.slide'));
       const total = slides.length;
       let idx = 0;
       const pager = document.getElementById('pager');
       const progress = document.getElementById('progressBar');
-      function show(i){
-        slides.forEach(s=>s.classList.add('inactive'));
-        slides.forEach(s=>s.classList.remove('active'));
+      function show(i) {
+        slides.forEach(s => s.classList.add('inactive'));
+        slides.forEach(s => s.classList.remove('active'));
         const s = slides[i];
         s.classList.remove('inactive');
         s.classList.add('active');
         idx = i;
-        pager.textContent = (i+1) + ' / ' + total;
-        const pct = Math.round(((i)/(total-1))*100);
+        pager.textContent = (i + 1) + ' / ' + total;
+        const pct = Math.round(((i) / (total - 1)) * 100);
         progress.style.width = pct + '%';
       }
-      document.getElementById('next').addEventListener('click',()=>show(Math.min(idx+1,total-1)));
-      document.getElementById('prev').addEventListener('click',()=>show(Math.max(idx-1,0)));
-      document.addEventListener('keydown',e=>{
-        if(e.key==='ArrowRight' || e.key==='PageDown' || e.code==='Space'){
-          e.preventDefault(); show(Math.min(idx+1,total-1));
+      document.getElementById('next').addEventListener('click', () => show(Math.min(idx + 1, total - 1)));
+      document.getElementById('prev').addEventListener('click', () => show(Math.max(idx - 1, 0)));
+      document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.code === 'Space') {
+          e.preventDefault(); show(Math.min(idx + 1, total - 1));
         }
-        if(e.key==='ArrowLeft' || e.key==='PageUp'){
-          e.preventDefault(); show(Math.max(idx-1,0));
+        if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+          e.preventDefault(); show(Math.max(idx - 1, 0));
         }
       });
       // touch swipe
-      let startX=0;document.addEventListener('touchstart',e=>startX=e.touches[0].clientX);
-      document.addEventListener('touchend',e=>{const dx=(e.changedTouches[0].clientX-startX); if(dx<-40) show(Math.min(idx+1,total-1)); if(dx>40) show(Math.max(idx-1,0));});
+      let startX = 0; document.addEventListener('touchstart', e => startX = e.touches[0].clientX);
+      document.addEventListener('touchend', e => { const dx = (e.changedTouches[0].clientX - startX); if (dx < -40) show(Math.min(idx + 1, total - 1)); if (dx > 40) show(Math.max(idx - 1, 0)); });
 
       // click to start first slide animation
       show(0);
     })();
   </script>
 </body>
+
 </html>
