@@ -293,6 +293,114 @@
       font-size: 12px;
     }
 
+    /* Sequence Diagram Styles */
+    .sequence-stage {
+      position: relative;
+      flex: 1;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 40px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .actor-line {
+      width: 2px;
+      background: rgba(255, 255, 255, 0.1);
+      height: 100%;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .actor-label {
+      background: var(--card);
+      padding: 4px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--muted);
+      margin-bottom: 20px;
+      z-index: 2;
+    }
+
+    .seq-msg {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 300ms, transform 300ms;
+    }
+
+    .seq-msg.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .arrow {
+      height: 2px;
+      background: var(--accent);
+      position: absolute;
+      top: 50%;
+      width: 0;
+      transition: width 600ms ease-out;
+    }
+
+    .arrow::after {
+      content: '';
+      position: absolute;
+      top: -4px;
+      width: 0;
+      height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+
+    /* Client -> Server */
+    .c2s .arrow {
+      left: 42px;
+      /* offset from actor line */
+    }
+
+    .c2s .arrow::after {
+      right: -5px;
+      border-left: 8px solid var(--accent);
+    }
+
+    /* Server -> Client */
+    .s2c .arrow {
+      right: 42px;
+    }
+
+    .s2c .arrow::after {
+      left: -5px;
+      border-right: 8px solid var(--accent);
+    }
+
+    .msg-text {
+      position: absolute;
+      width: 100%;
+      text-align: center;
+      top: -16px;
+      font-size: 11px;
+      color: #cbd5e1;
+      font-family: monospace;
+    }
+
+    .msg-time {
+      position: absolute;
+      left: -30px;
+      font-size: 10px;
+      color: var(--muted);
+      top: 8px;
+    }
+
     /* nav */
     .nav {
       position: absolute;
@@ -684,34 +792,16 @@
         <div class="btn" style="padding:4px 8px;font-size:12px"
           onclick="document.getElementById('detailModal').classList.remove('open')">✕</div>
       </div>
-      <div class="screen" style="background:rgba(0,0,0,0.3)">
-        <div class="log-divider">Discovery Stage • ETH 0x8863</div>
-        <div class="packet-log"><span class="time">0.000</span><span class="proto">PADI</span><span
-            class="info">Broadcast</span></div>
-        <div class="packet-log"><span class="time">0.002</span><span class="proto">PADO</span><span class="info">Offer
-            (AC-Name)</span></div>
-        <div class="packet-log"><span class="time">0.003</span><span class="proto">PADR</span><span
-            class="info">Request</span></div>
-        <div class="packet-log"><span class="time">0.005</span><span class="proto">PADS</span><span class="info">Session
-            ID: 0x1A2B</span></div>
-
-        <div class="log-divider" style="margin-top:8px">Session Stage • ETH 0x8864</div>
-        <div class="packet-log"><span class="time">0.010</span><span class="proto">LCP</span><span class="info">Conf-Req
-            (Magic)</span></div>
-        <div class="packet-log"><span class="time">0.012</span><span class="proto">LCP</span><span class="info">Conf-Ack
-            (OK)</span></div>
-        <div class="packet-log"><span class="time">0.015</span><span class="proto">PAP</span><span class="info">Auth-Req
-            (User)</span></div>
-        <div class="packet-log"><span class="time">0.018</span><span class="proto">PAP</span><span class="info">Auth-Ack
-            (Success)</span></div>
-        <div class="packet-log"><span class="time">0.020</span><span class="proto">IPCP</span><span
-            class="info">Conf-Req (IP=0)</span></div>
-        <div class="packet-log"><span class="time">0.022</span><span class="proto">IPCP</span><span
-            class="info">Conf-Nak (Sugg IP)</span></div>
-        <div class="packet-log"><span class="time">0.025</span><span class="proto">IPCP</span><span
-            class="info">Conf-Req (Accept)</span></div>
-        <div class="packet-log"><span class="time">0.028</span><span class="proto">IPCP</span><span
-            class="info">Conf-Ack (Bound)</span></div>
+      <div class="screen" style="background:rgba(0,0,0,0.3); padding:0">
+        <div class="sequence-stage" id="seqStage">
+          <div class="actor-line">
+            <div class="actor-label">Client</div>
+          </div>
+          <div class="actor-line">
+            <div class="actor-label">Server</div>
+          </div>
+          <!-- Messages will be injected here by JS -->
+        </div>
       </div>
       <div style="margin-top:12px;text-align:center;font-size:12px;color:var(--muted)">
         Click anywhere outside to close
@@ -727,11 +817,86 @@
 
       card.addEventListener('click', () => {
         modal.classList.add('open');
+        playAnimation();
       });
 
       modal.addEventListener('click', () => {
         modal.classList.remove('open');
       });
+
+      // Animation Data
+      const packets = [
+        { t: '0.000', proto: 'PADI', info: 'Broadcast', dir: 'c2s' },
+        { t: '0.002', proto: 'PADO', info: 'Offer (AC-Name)', dir: 's2c' },
+        { t: '0.003', proto: 'PADR', info: 'Request', dir: 'c2s' },
+        { t: '0.005', proto: 'PADS', info: 'Session ID: 0x1A2B', dir: 's2c' },
+        { divider: 'Session Stage • ETH 0x8864' },
+        { t: '0.010', proto: 'LCP', info: 'Conf-Req (Magic)', dir: 'c2s' },
+        { t: '0.012', proto: 'LCP', info: 'Conf-Ack (OK)', dir: 's2c' },
+        { t: '0.015', proto: 'PAP', info: 'Auth-Req (User)', dir: 'c2s' },
+        { t: '0.018', proto: 'PAP', info: 'Auth-Ack (Success)', dir: 's2c' },
+        { t: '0.020', proto: 'IPCP', info: 'Conf-Req (IP=0)', dir: 'c2s' },
+        { t: '0.022', proto: 'IPCP', info: 'Conf-Nak (Sugg IP)', dir: 's2c' },
+        { t: '0.025', proto: 'IPCP', info: 'Conf-Req (Accept)', dir: 'c2s' },
+        { t: '0.028', proto: 'IPCP', info: 'Conf-Ack (Bound)', dir: 's2c' }
+      ];
+
+      function playAnimation() {
+        const stage = document.getElementById('seqStage');
+        // Keep only the actor lines
+        const actors = Array.from(stage.querySelectorAll('.actor-line'));
+        stage.innerHTML = '';
+        actors.forEach(a => stage.appendChild(a));
+
+        let delay = 0;
+        let topOffset = 40;
+
+        packets.forEach(p => {
+          if (p.divider) {
+            const div = document.createElement('div');
+            div.className = 'log-divider';
+            div.style.position = 'absolute';
+            div.style.top = topOffset + 'px';
+            div.style.left = '50%';
+            div.style.transform = 'translateX(-50%)';
+            div.style.zIndex = '10';
+            div.textContent = p.divider;
+            stage.appendChild(div);
+            topOffset += 30;
+            return;
+          }
+
+          const row = document.createElement('div');
+          row.className = `seq-msg ${p.dir}`;
+          row.style.top = topOffset + 'px';
+
+          const text = document.createElement('div');
+          text.className = 'msg-text';
+          text.innerHTML = `<span style="color:var(--accent);font-weight:bold">${p.proto}</span> ${p.info}`;
+
+          const time = document.createElement('div');
+          time.className = 'msg-time';
+          time.textContent = p.t;
+
+          const arrow = document.createElement('div');
+          arrow.className = 'arrow';
+
+          row.appendChild(time);
+          row.appendChild(text);
+          row.appendChild(arrow);
+          stage.appendChild(row);
+
+          // Animate
+          setTimeout(() => {
+            row.classList.add('show');
+            // Calculate width based on container but fixed for now
+            arrow.style.width = 'calc(100% - 84px)';
+          }, delay);
+
+          delay += 600; // 600ms per step
+          topOffset += 50;
+        });
+      }
 
       const slides = Array.from(document.querySelectorAll('.slide'));
       const total = slides.length;
