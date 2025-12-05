@@ -804,27 +804,89 @@
         <!-- Slide 4: IPCP deep -->
         <section class="slide inactive" data-index="3" id="s3">
           <div class="left">
-            <div class="title">IPCP 深度解析（逐字段）</div>
-            <div class="subtitle">NAK 的语义、双向协商、最终生效时刻</div>
-            <div class="card">
-              <div class="muted">抓包中注意：</div>
-              <div class="proto">Client → Conf-Req (IP=0.0.0.0, DNS=0.0.0.0)</div>
-              <div class="proto">Server → Conf-Nak (suggested IP for Client)</div>
-              <div class="proto">Client → Conf-Req (request suggested IP)</div>
-              <div class="proto">Server → Conf-Ack (Client IP assigned)</div>
-              <div class="proto">Server → Conf-Req (Server's own IP)</div>
-              <div class="proto">Client → Conf-Ack (Ack Server's IP)</div>
+            <div class="title">IPCP 深度解析（地址分配）</div>
+            <div class="subtitle">NAK 机制：Client 请求 0.0.0.0 → Server 指派 IP</div>
+            <div class="card" style="display:flex;flex-direction:column;gap:12px">
+              <div class="muted">IP 地址协商流程：</div>
+
+              <div class="summary-item">
+                <div class="summary-icon">REQ</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Client Request (0.0.0.0)</div>
+                  <div class="muted" style="font-size:12px">"I don't have an IP, please give me one"</div>
+                </div>
+              </div>
+
+              <div class="summary-item">
+                <div class="summary-icon" style="color:var(--cyan)">NAK</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Server NAK (Suggestion)</div>
+                  <div class="muted" style="font-size:12px">"No, use this IP: 192.168.1.100"</div>
+                </div>
+              </div>
+
+              <div class="summary-item">
+                <div class="summary-icon">REQ</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Client Request (Assigned)</div>
+                  <div class="muted" style="font-size:12px">"Okay, I request 192.168.1.100"</div>
+                </div>
+              </div>
+
+              <div class="summary-item">
+                <div class="summary-icon" style="color:var(--cyan)">ACK</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Server ACK</div>
+                  <div class="muted" style="font-size:12px">"Agreed. Link is up."</div>
+                </div>
+              </div>
+
             </div>
           </div>
           <div class="right">
             <div class="card mock-phone">
               <div class="chip muted">IPCP • Protocol 0x8021</div>
               <div class="screen">
-                <div class="chip">Client Conf-Req (0.0.0.0)</div>
-                <div class="chip">Server Conf-Nak (Suggest IP)</div>
-                <div class="chip">Client Conf-Req (Suggested)</div>
-                <div class="chip">Server Conf-Ack (OK)</div>
-                <div class="chip">Server Conf-Req (Server IP)</div>
+                <div class="log-divider">IP Assignment</div>
+
+                <div class="packet-log">
+                  <span class="time">0.020</span>
+                  <span class="proto">IPCP</span>
+                  <span class="info">C→S Conf-Req (IP=0.0.0.0)</span>
+                </div>
+
+                <div class="packet-log">
+                  <span class="time">0.022</span>
+                  <span class="proto" style="color:var(--cyan)">IPCP</span>
+                  <span class="info">S→C Conf-Nak (IP=192.168.1.100)</span>
+                </div>
+
+                <div class="packet-log">
+                  <span class="time">0.024</span>
+                  <span class="proto">IPCP</span>
+                  <span class="info">C→S Conf-Req (IP=192.168.1.100)</span>
+                </div>
+
+                <div class="packet-log">
+                  <span class="time">0.026</span>
+                  <span class="proto" style="color:var(--cyan)">IPCP</span>
+                  <span class="info">S→C Conf-Ack (IP=192.168.1.100)</span>
+                </div>
+
+                <div class="log-divider" style="margin-top:12px">Server IP Info</div>
+
+                <div class="packet-log">
+                  <span class="time">0.026</span>
+                  <span class="proto" style="color:var(--cyan)">IPCP</span>
+                  <span class="info">S→C Conf-Req (IP=192.168.1.1)</span>
+                </div>
+
+                <div class="packet-log">
+                  <span class="time">0.028</span>
+                  <span class="proto">IPCP</span>
+                  <span class="info">C→S Conf-Ack (IP=192.168.1.1)</span>
+                </div>
+
               </div>
             </div>
           </div>
