@@ -896,20 +896,78 @@
         <section class="slide inactive" data-index="4" id="s4">
           <div class="left">
             <div class="title">LCP Echo 保活与脱落检测</div>
-            <div class="subtitle">定期 Echo-Request / Echo-Reply，超时重新拨号</div>
-            <div class="card">
-              <div class="muted">常见参数：</div>
-              <div class="proto">Interval: 10s • Retry: 3~5 • If no reply → consider link dead</div>
-              <div class="proto">Wireshark: LCP Echo-Request (Code=9) / Echo-Reply (Code=10)</div>
+            <div class="subtitle">链路层心跳机制：定期探测，超时断连</div>
+            <div class="card" style="display:flex;flex-direction:column;gap:12px">
+              <div class="muted">LCP Echo 机制详解：</div>
+
+              <div class="summary-item">
+                <div class="summary-icon">ECHO</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Echo-Request</div>
+                  <div class="muted" style="font-size:12px">Periodic Probe (e.g. every 10s)</div>
+                </div>
+              </div>
+
+              <div class="summary-item">
+                <div class="summary-icon" style="color:var(--cyan)">REPLY</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Echo-Reply</div>
+                  <div class="muted" style="font-size:12px">Must reflect Magic Number</div>
+                </div>
+              </div>
+
+              <div class="summary-item">
+                <div class="summary-icon" style="color:#ef4444">DEAD</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Link Dead Detection</div>
+                  <div class="muted" style="font-size:12px">No reply after N retries → Teardown</div>
+                </div>
+              </div>
+
+              <div style="height:1px;background:rgba(255,255,255,0.1);margin:4px 0"></div>
+              <div class="muted" style="font-size:12px">
+                注：双方均可发送 Echo-Request。通常客户端和服务器都会定期检测对方。回复必须携带请求方的 Magic Number。
+              </div>
             </div>
           </div>
           <div class="right">
             <div class="card mock-phone">
-              <div class="chip muted">Keepalive</div>
+              <div class="chip muted">Keepalive • LCP 0xC021</div>
               <div class="screen">
-                <div class="chip">Echo-Request →</div>
-                <div class="chip">Echo-Reply ←</div>
-                <div class="chip muted">No reply → teardown</div>
+                <div class="log-divider">Normal Keepalive</div>
+
+                <div class="packet-log">
+                  <span class="time">10.00</span>
+                  <span class="proto">LCP</span>
+                  <span class="info">C→S Echo-Req (Magic=0x12345678)</span>
+                </div>
+
+                <div class="packet-log">
+                  <span class="time">10.00</span>
+                  <span class="proto" style="color:var(--cyan)">LCP</span>
+                  <span class="info">S→C Echo-Reply (Magic=0x12345678)</span>
+                </div>
+
+                <div class="log-divider" style="margin-top:12px">Link Loss Scenario</div>
+
+                <div class="packet-log">
+                  <span class="time">20.00</span>
+                  <span class="proto">LCP</span>
+                  <span class="info">C→S Echo-Req (Attempt 1)</span>
+                </div>
+                <!-- Missing reply -->
+                <div class="packet-log">
+                  <span class="time">23.00</span>
+                  <span class="proto">LCP</span>
+                  <span class="info">C→S Echo-Req (Attempt 2)</span>
+                </div>
+
+                <div class="packet-log">
+                  <span class="time">26.00</span>
+                  <span class="proto" style="color:#ef4444">SYS</span>
+                  <span class="info">Timeout! Link Termination</span>
+                </div>
+
               </div>
             </div>
           </div>
@@ -919,37 +977,49 @@
         <section class="slide inactive" data-index="5" id="s5">
           <div class="left">
             <div class="title">故障排查要点 & 总结</div>
-            <div class="subtitle">抓包优先级：Discovery → LCP → Auth → IPCP → Echo</div>
-            <div class="card">
-              <div class="muted">常见问题：</div>
-              <div class="bullet">
-                <div class="dot"></div>
-                <div><b>PADO 不回应</b>
-                  <div class="muted">物理/交换/ VLAN 问题</div>
+            <div class="subtitle">Discovery / LCP / Magic Number 关键注意点</div>
+            <div class="card" style="display:flex;flex-direction:column;gap:12px">
+              <div class="muted">常见问题与规范：</div>
+
+              <div class="summary-item">
+                <div class="summary-icon">MAC</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">MAC 地址类型</div>
+                  <div class="muted" style="font-size:12px">PADI 目的为广播 (FF:FF..)，其余均为单播</div>
                 </div>
               </div>
-              <div class="bullet">
-                <div class="dot"></div>
-                <div><b>LCP 超时</b>
-                  <div class="muted">MRU/魔术字/认证失败</div>
+
+              <div class="summary-item">
+                <div class="summary-icon">MAGIC</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">Magic Number 作用</div>
+                  <div class="muted" style="font-size:12px">防环路（避免收到自己报文），切勿配错，在发送 Echo-Reply 时，必须携带请求方的 Magic Number
+                  </div>
                 </div>
               </div>
-              <div class="bullet">
-                <div class="dot"></div>
-                <div><b>IPCP Nak 循环</b>
-                  <div class="muted">RADIUS / IP pool 异常</div>
+
+              <div class="summary-item">
+                <div class="summary-icon" style="color:#ef4444">ZERO</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">非法值检测</div>
+                  <div class="muted" style="font-size:12px">Magic Number 协商值不能为 0</div>
                 </div>
               </div>
-              <div style="height:8px"></div>
-              <div class="muted">要点：确认最终被 <b>Configure-Ack</b> 的参数才算生效；NAK 只是建议。</div>
+
+              <div style="height:1px;background:rgba(255,255,255,0.1);margin:4px 0"></div>
+              <div class="muted" style="font-size:12px">
+                总结：从 MAC 层单播/广播特性，到 LCP 层魔术字防环，细节决定拨号成败。
+              </div>
             </div>
           </div>
           <div class="right">
             <div class="card mock-phone">
-              <div class="chip muted">Tips</div>
+              <div class="chip muted">Checklist</div>
               <div class="screen">
-                <div class="chip">使用 tshark 导出 IPCP 选项</div>
-                <div class="chip">对照 RADIUS 日志</div>
+                <div class="chip">PADI Dst == FF:FF:FF:FF:FF:FF</div>
+                <div class="chip">PADO/PADR/etc == Unicast</div>
+                <div class="chip">Magic Num != 0</div>
+                <div class="chip">My Magic != Peer Magic</div>
               </div>
             </div>
           </div>
